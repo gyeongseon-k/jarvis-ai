@@ -1,0 +1,4 @@
+python-dotenv>=1.0.0
+faster-whisper>=1.0.0
+pyttsx3>=2.90
+requests>=2.31.0
