@@ -1,11 +1,18 @@
 """Entry point for the Jarvis AI voice assistant.
 
 Step 1: mic capture (parec) -> STT (faster-whisper).
-Step 2: TTS (Windows native voice via PowerShell, pyttsx3 fallback).
+Step 2: TTS (Edge TTS, pyttsx3 fallback).
 Step 3: LLM (Ollama qwen2.5:3b) generates replies.
 Step 4: action commands (e.g. "크롬 열어") run locally instead of going to the LLM.
 Step 5: wake word ("자비스") gates command processing via JarvisAssistant's state machine.
+
+The assistant's run_forever() loop runs on a background thread, and the main
+thread just waits on it. This keeps the main thread free for whatever needs
+to own it later -- a tray icon's event loop, for instance -- without having
+to restructure this file again at that point.
 """
+
+import threading
 
 from assistant import JarvisAssistant
 from automation.commands import CommandRunner
@@ -25,10 +32,14 @@ def main():
     speaker.speak("자비스 음성 출력 테스트입니다.")
     print("Jarvis is idle. Say '자비스' to wake it. (Ctrl+C to exit)")
 
+    worker = threading.Thread(target=assistant.run_forever, daemon=True)
+    worker.start()
+
     try:
-        assistant.run_forever()
+        worker.join()
     except KeyboardInterrupt:
         print("\nShutting down Jarvis.")
+        assistant.stop()
 
 
 if __name__ == "__main__":
